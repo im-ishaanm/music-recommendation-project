@@ -5,6 +5,7 @@
 #include <algorithm> 
 #include <cctype>
 #include <locale>
+#include<iterator>
 
 using namespace std;
 
@@ -64,9 +65,11 @@ class MusicList {
         }
 
         void printMusicPairs() {
-            for(auto x : music_map) {
-                cout << x.second << " by " << x.first << endl;
+            multimap <string, string> :: iterator itr;
+            for(itr = music_map.begin(); itr != music_map.end(); itr++){
+                cout << itr->second << " by " << itr->first << endl;
             }
+            cout << endl;
         }
 };
 
