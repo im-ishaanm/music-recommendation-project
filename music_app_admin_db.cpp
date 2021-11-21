@@ -49,7 +49,7 @@ class SQLiteDatabase {
             sqlite3_close(DB);
         }
 
-        static int deleteData(int row_id) {
+        void deleteData(int row_id) {
             sqlite3 *DB;
             char *error;
             
@@ -65,10 +65,9 @@ class SQLiteDatabase {
                 cout << "Record deleted successfully!" << endl;
             }
             sqlite3_close(DB);
-            return 0;
         }
 
-        static void insertData(string artist, string song, string genres) {
+        int insertData(string artist, string song, string genres) {
             sqlite3 *DB;
             char *error;
             
@@ -82,8 +81,11 @@ class SQLiteDatabase {
                 sqlite3_free(error);
             } else {
                 cout << "Data inserted successfully!" << endl;
+                sqlite3_close(DB);
+                return 1;
             }
             sqlite3_close(DB);
+            return 0;
         }
 
         void deleteDataUI() {
@@ -101,7 +103,16 @@ class SQLiteDatabase {
             getline(cin, song_name);
             cout << "Enter Genres (comma seperated) [Eg: Pop, Rock, Jazz] : ";
             getline(cin, genres);
-            insertData(artist_name, song_name, genres);
+
+            if(artist_name.empty() || song_name.empty() || genres.empty()) {
+                cout << "Data cannot be NULL / Empty" << endl;
+                return;
+            }
+
+            int res = insertData(artist_name, song_name, genres);
+            if(res) {
+                artist_song_pair_map.insert(pair <string, string>(artist_name, song_name));
+            }
         }
 
         void fetchAllData() {
@@ -145,6 +156,7 @@ class MusicList {
         }
         void printArtistSongPair() {
             multimap<string, string> :: iterator itr;
+            cout << endl << endl;
             for(itr = artist_song_pair_map.begin(); itr != artist_song_pair_map.end(); itr++) {
                 cout << itr->first << " : " << itr->second << endl;
             }
@@ -153,10 +165,32 @@ class MusicList {
 };
 
 int main() {
+    // SQLiteDatabase::createDB();
+    // SQLiteDatabase::createTable();
+    bool loop = true;
     SQLiteDatabase myDB;
-    
-    myDB.deleteDataUI();
     myDB.fetchAllData();
     MusicList music_list = MusicList(myDB);
-    return 0;
+    while(loop) {
+        int choice;
+        cout << "Database Access : " << endl;
+        cout << "1. Add a record\n2. Delete a record\n3. Print Table\n4. Exit" << endl;
+        cout << ">> ";
+        cin >> choice;
+        cin.ignore();
+        switch(choice) {
+            case 1: myDB.insertDataUI();
+                    break;
+            case 2: myDB.deleteDataUI();
+                    break;
+            case 3: music_list.printArtistSongPair();
+                    break;
+            case 4: loop = false;
+                    break;
+            default: 
+                    cout << "Incorrect entry. Try again." << endl;
+                    break;
+        }
+        music_list = MusicList(myDB);
+    }
 }
