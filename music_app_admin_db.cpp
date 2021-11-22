@@ -12,6 +12,7 @@ using namespace std;
 class SQLiteDatabase {
     private:
         multimap<string, string> artist_song_pair_map;
+        multimap<string, string> song_genre_pair_map;
     public:
         static void createDB() {
             sqlite3* DB;
@@ -105,11 +106,19 @@ class SQLiteDatabase {
             getline(cin, genres);
 
             if(artist_name.empty() || song_name.empty() || genres.empty()) {
-                cout << "Data cannot be NULL / Empty" << endl;
+                cout << endl << endl << "ERROR : Data cannot be NULL / Empty" << endl << endl;
                 return;
             }
 
-            int res = insertData(artist_name, song_name, genres);
+            auto iterator = artist_song_pair_map.equal_range(artist_name);
+            for(auto itr = iterator.first; itr != iterator.second; itr++) {
+                if(itr->second == song_name) {
+                    cout << endl << endl << "ERROR: Song by the same Artist already exists" << endl << endl;
+                }
+            }
+
+            int res = 0;
+            //int res = insertData(artist_name, song_name, genres);
             if(res) {
                 artist_song_pair_map.insert(pair <string, string>(artist_name, song_name));
             }
@@ -129,11 +138,14 @@ class SQLiteDatabase {
             }
             while((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
                 int id = sqlite3_column_int(stmt, 0);
-                const char * artist_data = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
-                const char * song_data = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2));
+                const char * song_data = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
+                const char * artist_data = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2));
+                const char * genre_data = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 3));
                 string artist(artist_data);
+                string genres(genre_data);
                 string song(song_data);
                 artist_song_pair_map.insert(pair <string, string>(artist, song));
+                song_genre_pair_map.insert(pair <string, string>(song, genres));
             }
             if(rc != SQLITE_DONE) {
                 cout << "Something went wrong." << endl;
@@ -145,20 +157,24 @@ class SQLiteDatabase {
         multimap<string, string> getArtistSongPair() {
             return artist_song_pair_map;
         }
+        multimap<string, string> getSongGenrePair() {
+            return song_genre_pair_map;
+        }
 };
 
 class MusicList {
     private:
         multimap<string, string> artist_song_pair_map;
+        multimap<string, string> song_genre_pair_map;
     public:
         MusicList(SQLiteDatabase database) {
             artist_song_pair_map = database.getArtistSongPair();
+            song_genre_pair_map = database.getSongGenrePair();
         }
-        void printArtistSongPair() {
+        void printAllSongs() {
             multimap<string, string> :: iterator itr;
-            cout << endl << endl;
             for(itr = artist_song_pair_map.begin(); itr != artist_song_pair_map.end(); itr++) {
-                cout << itr->first << " : " << itr->second << endl;
+                cout << itr->second << " by " << itr->first << " [" << song_genre_pair_map.find(itr->second)->second << "]" << endl;
             }
             cout << endl;
         }
@@ -183,7 +199,7 @@ int main() {
                     break;
             case 2: myDB.deleteDataUI();
                     break;
-            case 3: music_list.printArtistSongPair();
+            case 3: music_list.printAllSongs();
                     break;
             case 4: loop = false;
                     break;
