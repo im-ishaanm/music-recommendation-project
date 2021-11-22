@@ -9,6 +9,18 @@
 
 using namespace std;
 
+/*
+TODO:
+1) Figure out a way to update map after deletion
+2) Function to search for songs probably
+3) Documentation, a lot of it
+
+
+*/
+
+
+
+
 class SQLiteDatabase {
     private:
         multimap<string, string> artist_song_pair_map;
@@ -50,7 +62,7 @@ class SQLiteDatabase {
             sqlite3_close(DB);
         }
 
-        void deleteData(int row_id) {
+        int deleteData(int row_id) {
             sqlite3 *DB;
             char *error;
             
@@ -64,8 +76,11 @@ class SQLiteDatabase {
                 sqlite3_free(error);
             } else {
                 cout << "Record deleted successfully!" << endl;
+                sqlite3_close(DB);
+                return 1;
             }
             sqlite3_close(DB);
+            return 0;
         }
 
         int insertData(string artist, string song, string genres) {
@@ -93,7 +108,8 @@ class SQLiteDatabase {
             int id;
             cout << "Enter ROW ID to delete : ";
             cin >> id;
-            deleteData(id);
+            int res = deleteData(id);
+
         }
 
         void insertDataUI() {
@@ -117,10 +133,10 @@ class SQLiteDatabase {
                 }
             }
 
-            int res = 0;
-            //int res = insertData(artist_name, song_name, genres);
+            int res = insertData(artist_name, song_name, genres);
             if(res) {
                 artist_song_pair_map.insert(pair <string, string>(artist_name, song_name));
+                song_genre_pair_map.insert(pair <string, string>(song_name, genres));
             }
         }
 

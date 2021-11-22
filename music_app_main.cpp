@@ -50,61 +50,6 @@ class SQLiteDatabase {
             sqlite3_close(DB);
         }
 
-        static int deleteData(int row_id) {
-            sqlite3 *DB;
-            char *error;
-            
-            string id = to_string(row_id);
-            string query = "DELETE FROM SONGS WHERE ID = " + id + ";";
-        
-            int response = sqlite3_open("./db/projectDB.db", &DB);
-            response = sqlite3_exec(DB, query.c_str(), NULL, 0, &error);
-            if(response != SQLITE_OK) {
-                cout << "Error deleting record." << endl;
-                sqlite3_free(error);
-            } else {
-                cout << "Record deleted successfully!" << endl;
-            }
-            sqlite3_close(DB);
-            return 0;
-        }
-
-        static void insertData(string artist, string song, string genres) {
-            sqlite3 *DB;
-            char *error;
-            
-            string query = "INSERT INTO SONGS(SONG_NAME, ARTIST_NAME, GENRES) VALUES('" + song + "', '" + artist +"', '" + genres +"');";
-            
-            int response = sqlite3_open("./db/projectDB.db", &DB);
-            response = sqlite3_exec(DB, query.c_str(), NULL, 0, &error);
-
-            if(response != SQLITE_OK) {
-                cout << "Error inserting data" << endl;
-                sqlite3_free(error);
-            } else {
-                cout << "Data inserted successfully!" << endl;
-            }
-            sqlite3_close(DB);
-        }
-
-        void deleteDataUI() {
-            int id;
-            cout << "Enter ROW ID to delete : ";
-            cin >> id;
-            deleteData(id);
-        }
-
-        void insertDataUI() {
-            string artist_name, song_name, genres;
-            cout << "Enter Artist Name : ";
-            getline(cin, artist_name);
-            cout << "Enter Song Name : ";
-            getline(cin, song_name);
-            cout << "Enter Genres (comma seperated) [Eg: Pop, Rock, Jazz] : ";
-            getline(cin, genres);
-            insertData(artist_name, song_name, genres);
-        }
-
         void fetchAllData() {
             sqlite3* DB;
             char* error;
