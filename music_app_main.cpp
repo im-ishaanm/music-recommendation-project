@@ -70,7 +70,7 @@ class SQLiteDatabase {
                 string artist(artist_data);
                 string genres(genre_data);
                 string song(song_data);
-                string genre_pair_key = song + artist;
+                string genre_pair_key = song + ":" + artist;
                 artist_song_pair_map.insert(pair <string, string>(artist, song));
                 song_genre_pair_map.insert(pair <string, string>(genre_pair_key, genres));
             }
@@ -93,21 +93,73 @@ class MusicList {
     private:
         multimap<string, string> artist_song_pair_map;
         multimap<string, string> song_genre_pair_map;
+        
     public:
         MusicList(SQLiteDatabase database) {
             artist_song_pair_map = database.getArtistSongPair();
             song_genre_pair_map = database.getSongGenrePair();
         }
 
+        vector<string> decryptGenreKey(string key) {
+            string delimiter = ":";
+            string token_song = key.substr(0, key.find(delimiter));
+            key.erase(0, key.find(delimiter) + delimiter.length());
+            string token_artist = key.substr(0, key.find(delimiter));
+            return { token_song, token_artist };
+        }
+
+        bool doesSongHaveGenre(string s, string delimiter, string genre) {
+            size_t pos = 0;
+            string token;
+            while ((pos = s.find(delimiter)) != string::npos) {
+                token = s.substr(0, pos);
+                if(token == genre) {
+                    return true;
+                }
+                s.erase(0, pos + delimiter.length());
+            }
+            if(s == genre) {
+                return true;
+            }
+            return false;
+        }
+
         void printAllSongs() {
             multimap<string, string> :: iterator itr;
             int id = 1;
             for(itr = artist_song_pair_map.begin(); itr != artist_song_pair_map.end(); itr++) {
-                string genre_pair_key = itr->second + itr->first;
+                string genre_pair_key = itr->second + ":" + itr->first;
                 cout << id << ". " << itr->second << " by " << itr->first << " [" << song_genre_pair_map.find(genre_pair_key)->second << "]" << endl;
                 id++;
             }
             cout << endl;
+        }
+        
+
+        void findSongByGenre(string genre) {
+            int id = 1;
+            bool songHasGenre, found = false;
+            vector<string> song_artist_pair;
+            multimap<string, string> :: iterator itr;
+
+            for(itr = song_genre_pair_map.begin(); itr != song_genre_pair_map.end(); itr++) {
+                songHasGenre = doesSongHaveGenre(itr->second, ", ", genre);
+                if(songHasGenre) {
+                    found = true;
+                    song_artist_pair = decryptGenreKey(itr->first);
+                    
+                    multimap<string, string> :: iterator itr2;
+                    for(itr2 = artist_song_pair_map.begin(); itr2 != artist_song_pair_map.end(); itr2++) {
+                        if(itr2->second == song_artist_pair[0] && itr2->first == song_artist_pair[1]) {
+                            cout << id << ". " << itr2->second << " by " << itr2->first << " [" << itr->second << "]" << endl;
+                            id++;
+                        }
+                    }
+                }
+            }
+            if(!found) {
+                cout << "No songs found with genre " << genre << endl;
+            }
         }
 
         void findSongByName(string name) {
@@ -116,7 +168,7 @@ class MusicList {
             multimap<string, string> :: iterator itr;
             cout << endl;
             for(itr = artist_song_pair_map.begin(); itr != artist_song_pair_map.end(); itr++) {
-                string genre_pair_key = itr->second + itr->first;
+                string genre_pair_key = itr->second + ":" + itr->first;
                 if(itr->second == name) {
                     cout << id << ". " << itr->second << " by " << itr->first << " [" << song_genre_pair_map.find(genre_pair_key)->second << "]" << endl;
                     found = true;
@@ -129,10 +181,19 @@ class MusicList {
             }
         }
 
-        void findSongByArtist(string artist) { 
+        void findSongByArtist(string artist) {
+            int id = 1;
             auto iterator = artist_song_pair_map.equal_range(artist);
+
+            if(iterator.first == iterator.second) {
+                cout << "No artists found by the name " << artist << endl;
+                return;
+            }
+
             for(auto itr = iterator.first; itr != iterator.second; itr++) {
-                cout << itr->second << " by " << itr->first << endl;
+                string genre_pair_key = itr->second + ":" + itr->first;
+                cout << id << ". " << itr->second << " by " << itr->first << " [" << song_genre_pair_map.find(genre_pair_key)->second << "]" << endl;
+                id++;
             }
         }
 
@@ -165,7 +226,20 @@ class AppUI {
                 case 1:
                     cout << "Enter the name of the song: ";
                     getline(cin, song_name);
+                    spacify();
                     music_list.findSongByName(song_name);
+                    break;
+                case 2:
+                    cout << "Enter the name of the artist: ";
+                    getline(cin, artist_name);
+                    spacify();
+                    music_list.findSongByArtist(artist_name);
+                    break;
+                case 3:
+                    cout << "Enter the genre: ";
+                    getline(cin, genre);
+                    spacify();
+                    music_list.findSongByGenre(genre);
                     break;
                 default:
                     cout << "Invalid choice! Please try again." << endl;
@@ -180,6 +254,7 @@ class AppUI {
 
             bool exit = false;
             while(!exit) {
+                cout << "\n\n" << endl;
                 int choice;
                 cout << "Welcome to NotSpotify! Let's get you started: " << endl;
                 cout << "1. Show All Songs\n2. Search for a Song\n3. Create Playlist\n4. Exit" << endl;
@@ -194,7 +269,7 @@ class AppUI {
                     case 2:
                         spacify();
                         searchMenu(music_list);
-                        
+                        break;
                     case 4:
                         exit = true;
                         break;

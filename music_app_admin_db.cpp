@@ -160,7 +160,7 @@ class SQLiteDatabase {
                 string artist(artist_data);
                 string genres(genre_data);
                 string song(song_data);
-                string genre_pair_key = song + artist;
+                string genre_pair_key = song + ":" + artist;
                 artist_song_pair_map.insert(pair <string, string>(artist, song));
                 song_genre_pair_map.insert(pair <string, string>(genre_pair_key, genres));
             }
@@ -191,7 +191,7 @@ class MusicList {
         void printAllSongs() {
             multimap<string, string> :: iterator itr;
             for(itr = artist_song_pair_map.begin(); itr != artist_song_pair_map.end(); itr++) {
-                string genre_pair_key = itr->second + itr->first;
+                string genre_pair_key = itr->second + ":" + itr->first;
                 cout << itr->second << " by " << itr->first << " [" << song_genre_pair_map.find(genre_pair_key)->second << "]" << endl;
             }
             cout << endl;
