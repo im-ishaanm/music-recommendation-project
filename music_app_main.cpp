@@ -14,39 +14,34 @@ class SQLiteDatabase {
         multimap<string, string> artist_song_pair_map;
         multimap<string, string> song_genre_pair_map;
     public:
-        static void createDB() {
+        void fetchPlaylistData() {
             sqlite3* DB;
-            int response = 0;
-            response = sqlite3_open("./db/projectDB.db", &DB);
-            sqlite3_close(DB);
-        }
-        
-        static void createTable() {
-            sqlite3 *DB;
-            char *error;
+            char* error;
 
-            string query = "CREATE TABLE IF NOT EXISTS SONGS("
-                "ID INTEGER PRIMARY KEY AUTOINCREMENT,"
-                "SONG_NAME TEXT NOT NULL,"
-                "ARTIST_NAME TEXT NOT NULL,"
-                "GENRES TEXT NOT NULL);";
-    
-            try {
-                int response = 0;
-                response = sqlite3_open("./db/projectDB.db", &DB);
+            sqlite3_stmt *stmt;
+            int response = sqlite3_open("./db/projectDB.db", &DB);
 
-                response = sqlite3_exec(DB, query.c_str(), NULL, 0, &error);
+            int rc = sqlite3_prepare_v2(DB, "SELECT * FROM SONGS", -1, &stmt, NULL);
 
-                if(response != SQLITE_OK) {
-                    cout << "Error creating table." << endl;
-                    sqlite3_free(error);
-                } else {
-                    cout << "Table created successfully!" << endl;
-                }
-                sqlite3_close(DB);
-            } catch (const exception& e) {
-                cout << e.what();
+            if(rc != SQLITE_OK) {
+                cout << "Error fetching data" << endl;
             }
+            while((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
+                int id = sqlite3_column_int(stmt, 0);
+                const char * song_data = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
+                const char * artist_data = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2));
+                const char * genre_data = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 3));
+                string artist(artist_data);
+                string genres(genre_data);
+                string song(song_data);
+                string genre_pair_key = song + ":" + artist;
+                artist_song_pair_map.insert(pair <string, string>(artist, song));
+                song_genre_pair_map.insert(pair <string, string>(genre_pair_key, genres));
+            }
+            if(rc != SQLITE_DONE) {
+                cout << "Something went wrong." << endl;
+            }
+            sqlite3_finalize(stmt);
             sqlite3_close(DB);
         }
 

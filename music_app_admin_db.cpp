@@ -32,6 +32,59 @@ class SQLiteDatabase {
             response = sqlite3_open("./db/projectDB.db", &DB);
             sqlite3_close(DB);
         }
+
+        static void createPlaylistTable() {
+            sqlite3 *DB;
+            char *error;
+
+            string query = "CREATE TABLE IF NOT EXISTS PLAYLISTS("
+                "ID INTEGER PRIMARY KEY AUTOINCREMENT,"
+                "PLAYLIST_NAME TEXT NOT NULL,"
+                "SONGS_LIST TEXT NOT NULL,"
+                "ARTISTS_LIST TEXT NOT NULL,"
+                "GENRES_LIST TEXT NOT NULL);";
+
+            try {
+                int response = 0;
+                response = sqlite3_open("./db/projectDB.db", &DB);
+
+                response = sqlite3_exec(DB, query.c_str(), NULL, 0, &error);
+
+                if(response != SQLITE_OK) {
+                    cout << "Error creating table." << endl;
+                    sqlite3_free(error);
+                } else {
+                    cout << "Table created successfully!" << endl;
+                }
+                sqlite3_close(DB);
+            } catch (const exception& e) {
+                cout << e.what();
+            }
+            sqlite3_close(DB); 
+        }
+
+
+
+        static int insertPlaylist(string playlist_name, string artist_list, string song_list, string genres_list) {
+            sqlite3 *DB;
+            char *error;
+            
+            string query = "INSERT INTO PLAYLISTS(PLAYLIST_NAME, SONGS_LIST, ARTISTS_LIST, GENRES_LIST) VALUES('" + playlist_name + "', '" + song_list + "', '" + artist_list +"', '" + genres_list +"');";
+            
+            int response = sqlite3_open("./db/projectDB.db", &DB);
+            response = sqlite3_exec(DB, query.c_str(), NULL, 0, &error);
+
+            if(response != SQLITE_OK) {
+                cout << "Error inserting data" << endl;
+                sqlite3_free(error);
+            } else {
+                cout << "Data inserted successfully!" << endl;
+                sqlite3_close(DB);
+                return 1;
+            }
+            sqlite3_close(DB);
+            return 0;
+        }
         
         static void createTable() {
             sqlite3 *DB;
@@ -60,6 +113,47 @@ class SQLiteDatabase {
                 cout << e.what();
             }
             sqlite3_close(DB);
+        }
+
+        static int deleteTable(string table_name) {
+            sqlite3 *DB;
+            char *error;
+            
+            string query = "DROP TABLE " + table_name;
+        
+            int response = sqlite3_open("./db/projectDB.db", &DB);
+            response = sqlite3_exec(DB, query.c_str(), NULL, 0, &error);
+            if(response != SQLITE_OK) {
+                cout << "Error deleting table." << endl;
+                sqlite3_free(error);
+            } else {
+                cout << "Table deleted successfully!" << endl;
+                sqlite3_close(DB);
+                return 1;
+            }
+            sqlite3_close(DB);
+            return 0;
+        }
+        
+        static int deletePlaylist(int row_id) {
+            sqlite3 *DB;
+            char *error;
+            
+            string id = to_string(row_id);
+            string query = "DELETE FROM PLAYLISTS WHERE ID = " + id + ";";
+        
+            int response = sqlite3_open("./db/projectDB.db", &DB);
+            response = sqlite3_exec(DB, query.c_str(), NULL, 0, &error);
+            if(response != SQLITE_OK) {
+                cout << "Error deleting record." << endl;
+                sqlite3_free(error);
+            } else {
+                cout << "Record deleted successfully!" << endl;
+                sqlite3_close(DB);
+                return 1;
+            }
+            sqlite3_close(DB);
+            return 0;
         }
 
         int deleteData(int row_id) {
@@ -201,6 +295,14 @@ class MusicList {
 int main() {
     // SQLiteDatabase::createDB();
     // SQLiteDatabase::createTable();
+
+    // SQLiteDatabase::createPlaylistTable();
+    // SQLiteDatabase::deletePlaylist(1);
+    //SQLiteDatabase::insertPlaylist("TestPlaylist", "Owl City, Landon Austin, Owl City", "Fireflies, Armor, Gold", "Electronic, Dance, Folk, Pop");
+
+    // SQLiteDatabase::deleteTable("PLAYLISTS");
+
+
     bool loop = true;
     SQLiteDatabase myDB;
     myDB.fetchAllData();
