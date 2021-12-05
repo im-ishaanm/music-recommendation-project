@@ -70,8 +70,9 @@ class SQLiteDatabase {
                 string artist(artist_data);
                 string genres(genre_data);
                 string song(song_data);
+                string genre_pair_key = song + artist;
                 artist_song_pair_map.insert(pair <string, string>(artist, song));
-                song_genre_pair_map.insert(pair <string, string>(song, genres));
+                song_genre_pair_map.insert(pair <string, string>(genre_pair_key, genres));
             }
             if(rc != SQLITE_DONE) {
                 cout << "Something went wrong." << endl;
@@ -97,19 +98,116 @@ class MusicList {
             artist_song_pair_map = database.getArtistSongPair();
             song_genre_pair_map = database.getSongGenrePair();
         }
+
         void printAllSongs() {
             multimap<string, string> :: iterator itr;
+            int id = 1;
             for(itr = artist_song_pair_map.begin(); itr != artist_song_pair_map.end(); itr++) {
-                cout << itr->second << " by " << itr->first << " [" << song_genre_pair_map.find(itr->second)->second << "]" << endl;
+                string genre_pair_key = itr->second + itr->first;
+                cout << id << ". " << itr->second << " by " << itr->first << " [" << song_genre_pair_map.find(genre_pair_key)->second << "]" << endl;
+                id++;
             }
             cout << endl;
+        }
+
+        void findSongByName(string name) {
+            int id = 1;
+            bool found = false;
+            multimap<string, string> :: iterator itr;
+            cout << endl;
+            for(itr = artist_song_pair_map.begin(); itr != artist_song_pair_map.end(); itr++) {
+                string genre_pair_key = itr->second + itr->first;
+                if(itr->second == name) {
+                    cout << id << ". " << itr->second << " by " << itr->first << " [" << song_genre_pair_map.find(genre_pair_key)->second << "]" << endl;
+                    found = true;
+                    id++;
+                }
+            }
+            cout << endl;
+            if(!found) {
+                cout << "Could not find the song: " << name << ". Try again X_X" << endl;
+            }
+        }
+
+        void findSongByArtist(string artist) { 
+            auto iterator = artist_song_pair_map.equal_range(artist);
+            for(auto itr = iterator.first; itr != iterator.second; itr++) {
+                cout << itr->second << " by " << itr->first << endl;
+            }
+        }
+
+        multimap<string, string> getSongGenrePair() {
+            return song_genre_pair_map;
+        }
+        multimap<string, string> getArtistSongPair() {
+            return artist_song_pair_map;
+        }
+};
+
+class AppUI {
+    private:
+        void spacify() {
+            cout << "\n\n\n" << endl;
+            cout << "-----------------" << endl;
+        }
+    public:
+        void searchMenu(MusicList music_list) {
+
+            string song_name, artist_name, genre;
+
+            int choice;
+            cout << "Search song by: " << endl;
+            cout << "1. Name\n2. Artist\n3. Genre" << endl;
+            cout << "Choice: ";
+            cin >> choice;
+            cin.ignore();
+            switch(choice) {
+                case 1:
+                    cout << "Enter the name of the song: ";
+                    getline(cin, song_name);
+                    music_list.findSongByName(song_name);
+                    break;
+                default:
+                    cout << "Invalid choice! Please try again." << endl;
+            }
+
+        }
+
+        void mainMenu() {
+            SQLiteDatabase myDB;
+            myDB.fetchAllData();
+            MusicList music_list = MusicList(myDB);
+
+            bool exit = false;
+            while(!exit) {
+                int choice;
+                cout << "Welcome to NotSpotify! Let's get you started: " << endl;
+                cout << "1. Show All Songs\n2. Search for a Song\n3. Create Playlist\n4. Exit" << endl;
+                cout << "Choice: ";
+                cin >> choice;
+
+                switch(choice) {
+                    case 1:
+                        spacify();
+                        music_list.printAllSongs();
+                        break;
+                    case 2:
+                        spacify();
+                        searchMenu(music_list);
+                        
+                    case 4:
+                        exit = true;
+                        break;
+                    default:
+                        cout << "Invalid choice. Please try again." << endl;
+                }
+            }
+            cout << "See you soon!" << endl;
         }
 };
 
 int main() {
-    SQLiteDatabase myDB;
-    myDB.fetchAllData();
-    MusicList music_list = MusicList(myDB);
-    music_list.printAllSongs();
+    AppUI UI;
+    UI.mainMenu();
     return 0;
 }
