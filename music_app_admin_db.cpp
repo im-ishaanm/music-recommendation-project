@@ -298,7 +298,7 @@ int main() {
 
     // SQLiteDatabase::createPlaylistTable();
     // SQLiteDatabase::deletePlaylist(1);
-    //SQLiteDatabase::insertPlaylist("TestPlaylist", "Owl City, Landon Austin, Owl City", "Fireflies, Armor, Gold", "Electronic, Dance, Folk, Pop");
+    SQLiteDatabase::insertPlaylist("ImagineDragons", "Imagine Dragons, Imagine Dragons", "Gold, Demons", "Rock, Alternative, Pop");
 
     // SQLiteDatabase::deleteTable("PLAYLISTS");
 
