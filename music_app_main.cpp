@@ -176,6 +176,123 @@ class SQLiteDatabase {
         }
 };
 
+class MusicList {
+    private:
+        multimap<string, string> artist_song_pair_map;
+        multimap<string, string> song_genre_pair_map;
+        
+    public:
+        MusicList(SQLiteDatabase database) {
+            artist_song_pair_map = database.getArtistSongPair();
+            song_genre_pair_map = database.getSongGenrePair();
+        }
+
+        static vector<string> decryptGenreKey(string key) {
+            string delimiter = ":";
+            string token_song = key.substr(0, key.find(delimiter));
+            key.erase(0, key.find(delimiter) + delimiter.length());
+            string token_artist = key.substr(0, key.find(delimiter));
+            return { token_song, token_artist };
+        }
+
+        bool doesSongHaveGenre(string s, string delimiter, string genre) {
+            size_t pos = 0;
+            string token;
+            while ((pos = s.find(delimiter)) != string::npos) {
+                token = s.substr(0, pos);
+                if(token == genre) {
+                    return true;
+                }
+                s.erase(0, pos + delimiter.length());
+            }
+            if(s == genre) {
+                return true;
+            }
+            return false;
+        }
+
+        void printAllSongs() {
+            multimap<string, string> :: iterator itr;
+            int id = 1;
+            for(itr = artist_song_pair_map.begin(); itr != artist_song_pair_map.end(); itr++) {
+                string genre_pair_key = itr->second + ":" + itr->first;
+                cout << id << ". " << itr->second << " by " << itr->first << " [" << song_genre_pair_map.find(genre_pair_key)->second << "]" << endl;
+                id++;
+            }
+            cout << endl;
+        }
+        
+
+        void findSongByGenre(string genre) {
+            int id = 1;
+            bool songHasGenre, found = false;
+            vector<string> song_artist_pair;
+            multimap<string, string> :: iterator itr;
+
+            for(itr = song_genre_pair_map.begin(); itr != song_genre_pair_map.end(); itr++) {
+                songHasGenre = doesSongHaveGenre(itr->second, ", ", genre);
+                if(songHasGenre) {
+                    found = true;
+                    song_artist_pair = decryptGenreKey(itr->first);
+                    
+                    multimap<string, string> :: iterator itr2;
+                    for(itr2 = artist_song_pair_map.begin(); itr2 != artist_song_pair_map.end(); itr2++) {
+                        if(itr2->second == song_artist_pair[0] && itr2->first == song_artist_pair[1]) {
+                            cout << id << ". " << itr2->second << " by " << itr2->first << " [" << itr->second << "]" << endl;
+                            id++;
+                        }
+                    }
+                }
+            }
+            if(!found) {
+                cout << "No songs found with genre " << genre << endl;
+            }
+        }
+
+        void findSongByName(string name) {
+            int id = 1;
+            bool found = false;
+            multimap<string, string> :: iterator itr;
+            cout << endl;
+            for(itr = artist_song_pair_map.begin(); itr != artist_song_pair_map.end(); itr++) {
+                string genre_pair_key = itr->second + ":" + itr->first;
+                if(itr->second == name) {
+                    cout << id << ". " << itr->second << " by " << itr->first << " [" << song_genre_pair_map.find(genre_pair_key)->second << "]" << endl;
+                    found = true;
+                    id++;
+                }
+            }
+            cout << endl;
+            if(!found) {
+                cout << "Could not find the song: " << name << ". Try again X_X" << endl;
+            }
+        }
+
+        void findSongByArtist(string artist) {
+            int id = 1;
+            auto iterator = artist_song_pair_map.equal_range(artist);
+
+            if(iterator.first == iterator.second) {
+                cout << "No artists found by the name " << artist << endl;
+                return;
+            }
+
+            for(auto itr = iterator.first; itr != iterator.second; itr++) {
+                string genre_pair_key = itr->second + ":" + itr->first;
+                cout << id << ". " << itr->second << " by " << itr->first << " [" << song_genre_pair_map.find(genre_pair_key)->second << "]" << endl;
+                id++;
+            }
+        }
+
+        multimap<string, string> getSongGenrePair() {
+            return song_genre_pair_map;
+        }
+        multimap<string, string> getArtistSongPair() {
+            return artist_song_pair_map;
+        }
+};
+
+
 class Playlist {
     private:
         multimap<string, string> artist_song_pair_map;
@@ -192,6 +309,44 @@ class Playlist {
 
             artist_song_pair_map = database.getArtistSongPair();
             song_genre_pair_map = database.getSongGenrePair();
+        }
+
+        void recommendSongs(string playlist_name, string playlist_songs, string playlist_artists, string playlist_genres) {
+            vector<string> songs_list, artists_list, genre_list;
+            songs_list = expandString(playlist_songs);
+            artists_list = expandString(playlist_artists);
+            genre_list = expandString(playlist_genres);
+
+            multimap<string, string>::iterator itr;
+            vector<string> song_artist_vector, genre_vector;
+
+            int id = 1;
+            for(itr = song_genre_pair_map.begin(); itr != song_genre_pair_map.end(); itr++) {
+                bool recommend = false, exists = false;
+                song_artist_vector = MusicList::decryptGenreKey(itr->first);
+                genre_vector = expandString(itr->second);
+
+                for(int i = 0; i < genre_vector.size(); i++) {
+                    if(count(genre_list.begin(), genre_list.end(), genre_vector[i])) {
+                        recommend = true;
+                    }
+                }
+
+                if(recommend) {
+                    for(int i = 0; i < songs_list.size(); i++) {
+                        if(songs_list[i] == song_artist_vector[0] && artists_list[i] == song_artist_vector[1]) {
+                            exists = true;
+                            break;
+                        }
+                    }
+
+                    if(!exists) {
+                        cout << id << ". " << song_artist_vector[0] << " by " << song_artist_vector[1] << endl;
+                        id++;
+                    }
+
+                }
+            }
         }
 
         void removeSongFromPlaylist(string playlist_name, string playlist_songs, string playlist_artists, string playlist_genres) {
@@ -218,7 +373,6 @@ class Playlist {
             }
             string genres, songs, artists;
             for(int i = 0; i < playlist_songs_list.size(); i++) {
-                // cout << playlist_songs_list[i] << " = " << playlist_artists_list[i] << endl;
                 if(songs.length() <= 0) {
                     songs = playlist_songs_list[i];
                 } else {
@@ -283,7 +437,6 @@ class Playlist {
                 SQLiteDatabase::updatePlaylist(playlist_name, playlist_songs, playlist_artists, playlist_genres, playlist_name);
             }
 
-            // TODO: add genres to playlist genres, add song and artist to string. remove duplicate genres and push to DB
 
         }
 
@@ -499,121 +652,7 @@ class Playlist {
         }
 };
 
-class MusicList {
-    private:
-        multimap<string, string> artist_song_pair_map;
-        multimap<string, string> song_genre_pair_map;
-        
-    public:
-        MusicList(SQLiteDatabase database) {
-            artist_song_pair_map = database.getArtistSongPair();
-            song_genre_pair_map = database.getSongGenrePair();
-        }
 
-        vector<string> decryptGenreKey(string key) {
-            string delimiter = ":";
-            string token_song = key.substr(0, key.find(delimiter));
-            key.erase(0, key.find(delimiter) + delimiter.length());
-            string token_artist = key.substr(0, key.find(delimiter));
-            return { token_song, token_artist };
-        }
-
-        bool doesSongHaveGenre(string s, string delimiter, string genre) {
-            size_t pos = 0;
-            string token;
-            while ((pos = s.find(delimiter)) != string::npos) {
-                token = s.substr(0, pos);
-                if(token == genre) {
-                    return true;
-                }
-                s.erase(0, pos + delimiter.length());
-            }
-            if(s == genre) {
-                return true;
-            }
-            return false;
-        }
-
-        void printAllSongs() {
-            multimap<string, string> :: iterator itr;
-            int id = 1;
-            for(itr = artist_song_pair_map.begin(); itr != artist_song_pair_map.end(); itr++) {
-                string genre_pair_key = itr->second + ":" + itr->first;
-                cout << id << ". " << itr->second << " by " << itr->first << " [" << song_genre_pair_map.find(genre_pair_key)->second << "]" << endl;
-                id++;
-            }
-            cout << endl;
-        }
-        
-
-        void findSongByGenre(string genre) {
-            int id = 1;
-            bool songHasGenre, found = false;
-            vector<string> song_artist_pair;
-            multimap<string, string> :: iterator itr;
-
-            for(itr = song_genre_pair_map.begin(); itr != song_genre_pair_map.end(); itr++) {
-                songHasGenre = doesSongHaveGenre(itr->second, ", ", genre);
-                if(songHasGenre) {
-                    found = true;
-                    song_artist_pair = decryptGenreKey(itr->first);
-                    
-                    multimap<string, string> :: iterator itr2;
-                    for(itr2 = artist_song_pair_map.begin(); itr2 != artist_song_pair_map.end(); itr2++) {
-                        if(itr2->second == song_artist_pair[0] && itr2->first == song_artist_pair[1]) {
-                            cout << id << ". " << itr2->second << " by " << itr2->first << " [" << itr->second << "]" << endl;
-                            id++;
-                        }
-                    }
-                }
-            }
-            if(!found) {
-                cout << "No songs found with genre " << genre << endl;
-            }
-        }
-
-        void findSongByName(string name) {
-            int id = 1;
-            bool found = false;
-            multimap<string, string> :: iterator itr;
-            cout << endl;
-            for(itr = artist_song_pair_map.begin(); itr != artist_song_pair_map.end(); itr++) {
-                string genre_pair_key = itr->second + ":" + itr->first;
-                if(itr->second == name) {
-                    cout << id << ". " << itr->second << " by " << itr->first << " [" << song_genre_pair_map.find(genre_pair_key)->second << "]" << endl;
-                    found = true;
-                    id++;
-                }
-            }
-            cout << endl;
-            if(!found) {
-                cout << "Could not find the song: " << name << ". Try again X_X" << endl;
-            }
-        }
-
-        void findSongByArtist(string artist) {
-            int id = 1;
-            auto iterator = artist_song_pair_map.equal_range(artist);
-
-            if(iterator.first == iterator.second) {
-                cout << "No artists found by the name " << artist << endl;
-                return;
-            }
-
-            for(auto itr = iterator.first; itr != iterator.second; itr++) {
-                string genre_pair_key = itr->second + ":" + itr->first;
-                cout << id << ". " << itr->second << " by " << itr->first << " [" << song_genre_pair_map.find(genre_pair_key)->second << "]" << endl;
-                id++;
-            }
-        }
-
-        multimap<string, string> getSongGenrePair() {
-            return song_genre_pair_map;
-        }
-        multimap<string, string> getArtistSongPair() {
-            return artist_song_pair_map;
-        }
-};
 
 class AppUI {
     private:
@@ -673,7 +712,7 @@ class AppUI {
                 */
 
                 int choice;
-                cout << "\n\nWhat would you like to do?\n1. Add a Song\n2. Remove a song\n3. Edit Playlist Name\n4. Delete Playlist" << endl;
+                cout << "\n\nWhat would you like to do?\n1. Add a Song\n2. Remove a Song\n3. Edit Playlist Name\n4. Recommend Songs\n5. Delete Playlist" << endl;
                 cout << "Choice: ";
                 cin >> choice;
                 cin.ignore();
@@ -691,6 +730,11 @@ class AppUI {
                         SQLiteDatabase::updatePlaylist(playlist_name, playlist_details[0], playlist_details[1], playlist_details[2], new_playlist_name);
                         break;
                     case 4:
+                        spacify();
+                        cout << "Based on your song preferences in the playlist " << playlist_name << ". We recommend you the following songs: " << endl;
+                        playlist.recommendSongs(playlist_name, playlist_details[0], playlist_details[1], playlist_details[2]);
+                        break;
+                    case 5:
                         SQLiteDatabase::deletePlaylist(playlist_name);
                         break;
                     default:
