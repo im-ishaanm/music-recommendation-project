@@ -11,8 +11,11 @@ g++ .\music_app_main.cpp .\sqlite3.o
 .\a.exe
 ```
 ## How to execute the DB program
-#### This program is ONLY used to play around with the database and is used for testing purposes only.
+#### This program is used to play around with the database and is used for testing purposes only.
 ```
 g++ .\music_app_admin_db.cpp .\sqlite3.o
 .\a.exe
 ```
+
+## misc folder
+The "misc" folder contains an old version of the project which did not incorporate a database. This version of the project stored data in a text file and all operations were done using the built-in C++ file handling techniques.
