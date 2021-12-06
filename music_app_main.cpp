@@ -194,6 +194,51 @@ class Playlist {
             song_genre_pair_map = database.getSongGenrePair();
         }
 
+        void removeSongFromPlaylist(string playlist_name, string playlist_songs, string playlist_artists, string playlist_genres) {
+            string song_name_delete, artist_name_delete;
+            cout << "Enter the name of the song to delete: ";
+            getline(cin, song_name_delete);
+            cout << "Enter the artist of the song " << song_name_delete << ": ";
+            getline(cin, artist_name_delete);
+
+            string genre_name_delete = getSongDetails(song_name_delete, artist_name_delete);
+            if(genre_name_delete == "error") {
+                return;
+            }
+
+            vector<string> playlist_songs_list = expandString(playlist_songs);
+            vector<string> playlist_artists_list = expandString(playlist_artists);
+            vector<string> playlist_genres_list = expandString(playlist_genres);
+
+            for(int i = 0; i < playlist_songs_list.size(); i++) {
+                if(playlist_songs_list[i] == song_name_delete && playlist_artists_list[i] == artist_name_delete) {
+                    playlist_songs_list.erase(playlist_songs_list.begin() + i);
+                    playlist_artists_list.erase(playlist_artists_list.begin() + i);
+                }
+            }
+            string genres, songs, artists;
+            for(int i = 0; i < playlist_songs_list.size(); i++) {
+                // cout << playlist_songs_list[i] << " = " << playlist_artists_list[i] << endl;
+                if(songs.length() <= 0) {
+                    songs = playlist_songs_list[i];
+                } else {
+                    songs = songs + ", " + playlist_songs_list[i];
+                }
+                if(artists.length() <= 0) {
+                    artists = playlist_artists_list[i];
+                } else {
+                    artists = artists + ", " + playlist_artists_list[i];
+                }
+                if(genres.length() <= 0) {
+                    genres = getSongDetails(playlist_songs_list[i], playlist_artists_list[i]);
+                } else {
+                    genres = genres + ", " + getSongDetails(playlist_songs_list[i], playlist_artists_list[i]);
+                }
+            }
+            genres = removeDuplicateGenres(genres);
+            SQLiteDatabase::updatePlaylist(playlist_name, songs, artists, genres, playlist_name);
+        }
+
         vector<string> getPlaylistDetails(string playlist_name) {
             vector<string> response;
             auto song_it = playlist_name_song_map.equal_range(playlist_name);
@@ -570,6 +615,7 @@ class AppUI {
                     case 1:
                         break;
                     case 2:
+                        playlist.removeSongFromPlaylist(playlist_name, playlist_details[0], playlist_details[1], playlist_details[2]);
                         break;
                     case 3:
                         cout << "Enter a new name for the playlist " << playlist_name << ": ";
