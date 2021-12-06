@@ -134,6 +134,33 @@ class SQLiteDatabase {
             sqlite3_close(DB);
             return 0;
         }
+
+        static int updatePlaylist(string playlist_name, string new_songs_list, string new_artists_list, string new_genres_list, string new_playlist_name) {
+            sqlite3 *DB;
+            char *error;
+
+            string query = "UPDATE PLAYLISTS SET PLAYLIST_NAME = '" + new_playlist_name + "', SONGS_LIST = '" + new_songs_list + "', ARTISTS_LIST = '" + new_artists_list + "', GENRES_LIST = '" + new_genres_list + "' WHERE PLAYLIST_NAME = '" + playlist_name + "';";
+    
+            try {
+                int response = 0;
+                response = sqlite3_open("./db/projectDB.db", &DB);
+
+                response = sqlite3_exec(DB, query.c_str(), NULL, 0, &error);
+
+                if(response != SQLITE_OK) {
+                    cout << "Error updating table." << endl;
+                    sqlite3_free(error);
+                } else {
+                    cout << "Table updated successfully!" << endl;
+                }
+                sqlite3_close(DB);
+            } catch (const exception& e) {
+                cout << e.what();
+            }
+            sqlite3_close(DB);  
+        }
+
+
         
         static int deletePlaylist(int row_id) {
             sqlite3 *DB;
@@ -297,36 +324,37 @@ int main() {
     // SQLiteDatabase::createTable();
 
     // SQLiteDatabase::createPlaylistTable();
-    // SQLiteDatabase::deletePlaylist(1);
-    SQLiteDatabase::insertPlaylist("ImagineDragons", "Imagine Dragons, Imagine Dragons", "Gold, Demons", "Rock, Alternative, Pop");
+    // SQLiteDatabase::deletePlaylist(5);
+    // SQLiteDatabase::insertPlaylist("UpdateTest", "Macklemore & Ryan Lewis, Maroon 5", "Thrift Shop, Daylight", "Hip-Hop, Rap, Pop");
 
     // SQLiteDatabase::deleteTable("PLAYLISTS");
+    // SQLiteDatabase::updatePlaylist("UpdatePlaylistV2", "Gold, Demons", "Owl City, Imagine Dragons", "Rock, Alternative, Pop", "TestAgain");
 
 
-    bool loop = true;
-    SQLiteDatabase myDB;
-    myDB.fetchAllData();
-    MusicList music_list = MusicList(myDB);
-    while(loop) {
-        int choice;
-        cout << "Database Access : " << endl;
-        cout << "1. Add a record\n2. Delete a record\n3. Print Table\n4. Exit" << endl;
-        cout << ">> ";
-        cin >> choice;
-        cin.ignore();
-        switch(choice) {
-            case 1: myDB.insertDataUI();
-                    break;
-            case 2: myDB.deleteDataUI();
-                    break;
-            case 3: music_list.printAllSongs();
-                    break;
-            case 4: loop = false;
-                    break;
-            default: 
-                    cout << "Incorrect entry. Try again." << endl;
-                    break;
-        }
-        music_list = MusicList(myDB);
-    }
+    // bool loop = true;
+    // SQLiteDatabase myDB;
+    // myDB.fetchAllData();
+    // MusicList music_list = MusicList(myDB);
+    // while(loop) {
+    //     int choice;
+    //     cout << "Database Access : " << endl;
+    //     cout << "1. Add a record\n2. Delete a record\n3. Print Table\n4. Exit" << endl;
+    //     cout << ">> ";
+    //     cin >> choice;
+    //     cin.ignore();
+    //     switch(choice) {
+    //         case 1: myDB.insertDataUI();
+    //                 break;
+    //         case 2: myDB.deleteDataUI();
+    //                 break;
+    //         case 3: music_list.printAllSongs();
+    //                 break;
+    //         case 4: loop = false;
+    //                 break;
+    //         default: 
+    //                 cout << "Incorrect entry. Try again." << endl;
+    //                 break;
+    //     }
+    //     music_list = MusicList(myDB);
+    // }
 }
