@@ -19,6 +19,26 @@ class SQLiteDatabase {
         multimap<string, string> playlist_name_artist_map;
         multimap<string, string> playlist_name_genre_map;
     public:
+        static int deletePlaylist(string playlist_name) {
+            sqlite3 *DB;
+            char *error;
+            
+            string query = "DELETE FROM PLAYLISTS WHERE PLAYLIST_NAME = '" + playlist_name + "';";
+        
+            int response = sqlite3_open("./db/projectDB.db", &DB);
+            response = sqlite3_exec(DB, query.c_str(), NULL, 0, &error);
+            if(response != SQLITE_OK) {
+                cout << "Error deleting playlist." << endl;
+                sqlite3_free(error);
+            } else {
+                cout << "Playlist " << playlist_name << " deleted successfully!" << endl;
+                sqlite3_free(error);
+                sqlite3_close(DB);
+                return 1;
+            }
+            sqlite3_close(DB);
+            return 0;
+        }
 
         static int insertPlaylist(string playlist_name, string artist_list, string song_list, string genres_list) {
             sqlite3 *DB;
@@ -30,9 +50,10 @@ class SQLiteDatabase {
             response = sqlite3_exec(DB, query.c_str(), NULL, 0, &error);
 
             if(response != SQLITE_OK) {
+                cout << "Error deleting Playlist" << endl;
+            } else {
                 cout << "Playlist " << playlist_name << " created successfully!" << endl;
                 sqlite3_free(error);
-            } else {
                 sqlite3_close(DB);
                 return 1;
             }
@@ -43,6 +64,10 @@ class SQLiteDatabase {
         void fetchPlaylistData() {
             sqlite3* DB;
             char* error;
+
+            playlist_name_song_map.clear();
+            playlist_name_artist_map.clear();
+            playlist_name_genre_map.clear();
 
             sqlite3_stmt *stmt;
             int response = sqlite3_open("./db/projectDB.db", &DB);
@@ -64,9 +89,11 @@ class SQLiteDatabase {
                 string artists_list(artists_list_data);
                 string genres_list(genres_list_data);
 
-                playlist_name_song_map.insert(pair <string, string>(playlist_name, songs_list));
-                playlist_name_artist_map.insert(pair <string, string>(playlist_name, artists_list));
-                playlist_name_genre_map.insert(pair <string, string>(playlist_name, genres_list));
+                if(playlist_name_song_map.count(playlist_name) == 0) {
+                    playlist_name_song_map.insert(pair <string, string>(playlist_name, songs_list));
+                    playlist_name_artist_map.insert(pair <string, string>(playlist_name, artists_list));
+                    playlist_name_genre_map.insert(pair <string, string>(playlist_name, genres_list));
+                }
             }
             if(rc != SQLITE_DONE) {
                 cout << "Something went wrong." << endl;
@@ -106,6 +133,32 @@ class SQLiteDatabase {
             sqlite3_close(DB);
         }
         
+        static void updatePlaylist(string playlist_name, string new_songs_list, string new_artists_list, string new_genres_list, string new_playlist_name) {
+            sqlite3 *DB;
+            char *error;
+
+            string query = "UPDATE PLAYLISTS SET PLAYLIST_NAME = '" + new_playlist_name + "', SONGS_LIST = '" + new_songs_list + "', ARTISTS_LIST = '" + new_artists_list + "', GENRES_LIST = '" + new_genres_list + "' WHERE PLAYLIST_NAME = '" + playlist_name + "';";
+    
+            try {
+                int response = 0;
+                response = sqlite3_open("./db/projectDB.db", &DB);
+
+                response = sqlite3_exec(DB, query.c_str(), NULL, 0, &error);
+
+                if(response != SQLITE_OK) {
+                    cout << "Error updating playlist." << endl;
+                    sqlite3_free(error);
+                } else {
+                    cout << "Playlist updated successfully!" << endl;
+                }
+                sqlite3_close(DB);
+            } catch (const exception& e) {
+                cout << e.what();
+            }
+            sqlite3_close(DB);  
+        }
+
+
         multimap<string, string> getArtistSongPair() {
             return artist_song_pair_map;
         }
@@ -141,6 +194,24 @@ class Playlist {
             song_genre_pair_map = database.getSongGenrePair();
         }
 
+        vector<string> getPlaylistDetails(string playlist_name) {
+            vector<string> response;
+            auto song_it = playlist_name_song_map.equal_range(playlist_name);
+            auto artist_it = playlist_name_artist_map.equal_range(playlist_name);
+            auto genre_it = playlist_name_genre_map.equal_range(playlist_name);
+
+            for(auto itr = song_it.first; itr != song_it.second; itr++) {
+                response.push_back(itr->second);
+            }
+            for(auto itr = artist_it.first; itr != artist_it.second; itr++) {
+                response.push_back(itr->second);
+            }
+            for(auto itr = genre_it.first; itr != genre_it.second; itr++) {
+                response.push_back(itr->second);
+            }
+            return response;
+        }
+
         string getSongDetails(string song_name, string artist_name) {
             string details;
 
@@ -162,7 +233,6 @@ class Playlist {
             cout << "No songs found by the name " << song_name << endl;
             return("error");
         }
-
 
         void remove_duplicates(vector<string>& vec)
         {
@@ -196,6 +266,13 @@ class Playlist {
             }
             returnVector.push_back(s);
             return returnVector;
+        }
+
+        void deletePlaylist(string playlist_name) {
+            int response = SQLiteDatabase::deletePlaylist(playlist_name);
+            if(response) {
+
+            }
         }
 
         void createPlaylist() {
@@ -252,7 +329,11 @@ class Playlist {
                     }
                 }
                 genres_list = removeDuplicateGenres(genres_list);
-                SQLiteDatabase::insertPlaylist(playlist_name, artists_list, songs_list, genres_list);
+                int response = SQLiteDatabase::insertPlaylist(playlist_name, artists_list, songs_list, genres_list);
+                if(response) {
+    
+                }
+                cout << "RESPONSE: " << response << endl;
             }
         }
 
@@ -268,7 +349,7 @@ class Playlist {
             cout << endl;       
         } 
 
-        void openPlaylist(string playlist_name) {
+        int openPlaylist(string playlist_name) {
             multimap<string, string> :: iterator itr;
             vector<string> songs_list, artists_list, genres_list;
 
@@ -278,7 +359,7 @@ class Playlist {
 
             if(song_iterator.first == song_iterator.second) {
                 cout << "This playlist does not exist" << endl;
-                return;
+                return 0;
             }
 
             for (auto itr = song_iterator.first; itr != song_iterator.second; ++itr) {
@@ -302,6 +383,7 @@ class Playlist {
             for(int i = 0; i < songs_list.size(); i++) {
                 cout << i + 1 << ". " << songs_list[i] << " by " << artists_list[i] << endl;
             }
+            return 1;
         }
 };
 
@@ -463,11 +545,51 @@ class AppUI {
 
         }
 
+        void editPlaylistMenu(string playlist_name, Playlist playlist) {
+            int foundPlaylist = playlist.openPlaylist(playlist_name);
+            if(!foundPlaylist) {
+                return;
+            } else {
+                string new_playlist_name;
+                vector<string> playlist_details = playlist.getPlaylistDetails(playlist_name);
+
+                /*
+                    playlist_details[] mapping details:
+                    [0] = songs
+                    [1] = artists
+                    [2] = genres
+                */
+
+                int choice;
+                cout << "\n\nWhat would you like to do?\n1. Add a Song\n2. Remove a song\n3. Edit Playlist Name\n4. Delete Playlist" << endl;
+                cout << "Choice: ";
+                cin >> choice;
+                cin.ignore();
+
+                switch(choice) {
+                    case 1:
+                        break;
+                    case 2:
+                        break;
+                    case 3:
+                        cout << "Enter a new name for the playlist " << playlist_name << ": ";
+                        getline(cin, new_playlist_name);
+                        SQLiteDatabase::updatePlaylist(playlist_name, playlist_details[0], playlist_details[1], playlist_details[2], new_playlist_name);
+                        break;
+                    case 4:
+                        SQLiteDatabase::deletePlaylist(playlist_name);
+                        break;
+                    default:
+                        cout << "Invalid choice." << endl;
+                }
+            }
+        }
+
         void playlistMenu(Playlist playlist) {
             string playlist_name;
             int choice;
             cout << "Playlist Options: " << endl;
-            cout << "1. Show all Playlists\n2. Open a Playlist\n3. Create a Playlist" << endl;
+            cout << "1. Show all Playlists\n2. Open a Playlist\n3. Create a Playlist\n4. Edit a Playlist" << endl;
             cout << "Choice: ";
             cin >> choice;
             cin.ignore();
@@ -486,6 +608,12 @@ class AppUI {
                 case 3:
                     spacify();
                     playlist.createPlaylist();
+                    break;
+                case 4:
+                    cout << "Enter the name of the playlist: ";
+                    getline(cin, playlist_name);
+                    spacify();
+                    editPlaylistMenu(playlist_name, playlist);
                     break;
                 default:
                     cout << "Invalid choice! Please try again." << endl;
@@ -520,6 +648,8 @@ class AppUI {
                     case 3:
                         spacify();
                         playlistMenu(playlist);
+                        myDB.fetchPlaylistData();
+                        playlist = Playlist(myDB);
                         break;
                     case 4:
                         exit = true;

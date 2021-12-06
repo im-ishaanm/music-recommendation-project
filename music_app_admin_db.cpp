@@ -162,12 +162,11 @@ class SQLiteDatabase {
 
 
         
-        static int deletePlaylist(int row_id) {
+        static int deletePlaylist(string playlist_name) {
             sqlite3 *DB;
             char *error;
             
-            string id = to_string(row_id);
-            string query = "DELETE FROM PLAYLISTS WHERE ID = " + id + ";";
+            string query = "DELETE FROM PLAYLISTS WHERE PLAYLIST_NAME = '" + playlist_name + "';";
         
             int response = sqlite3_open("./db/projectDB.db", &DB);
             response = sqlite3_exec(DB, query.c_str(), NULL, 0, &error);
@@ -324,7 +323,7 @@ int main() {
     // SQLiteDatabase::createTable();
 
     // SQLiteDatabase::createPlaylistTable();
-    // SQLiteDatabase::deletePlaylist(5);
+    SQLiteDatabase::deletePlaylist("LandonAustin");
     // SQLiteDatabase::insertPlaylist("UpdateTest", "Macklemore & Ryan Lewis, Maroon 5", "Thrift Shop, Daylight", "Hip-Hop, Rap, Pop");
 
     // SQLiteDatabase::deleteTable("PLAYLISTS");
