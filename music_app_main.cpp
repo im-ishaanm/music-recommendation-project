@@ -239,6 +239,77 @@ class Playlist {
             SQLiteDatabase::updatePlaylist(playlist_name, songs, artists, genres, playlist_name);
         }
 
+        void addSongToPlaylist(string playlist_name, string playlist_songs, string playlist_artists, string playlist_genres) {
+            string song_name, artist_name;
+
+            while(true) {
+                cout << "Enter name of the song to add [Type !stop to end]: ";
+                getline(cin, song_name);
+
+                if(song_name == "!stop") {
+                    break;
+                }
+
+                cout << "Enter the artist of the song " << song_name << " [Type !stop to end]: ";
+                getline(cin, artist_name);
+
+                if(artist_name == "!stop") {
+                    break;
+                }
+
+                string response = getSongDetails(song_name, artist_name);
+                if(response == "error") {
+                    continue;
+                }
+
+                if(doesSongExist(playlist_songs, playlist_artists, song_name, artist_name)) {
+                    cout << song_name << " by " << artist_name << " already exists in the Playlist!" << endl;
+                    continue;
+                }
+
+                vector<string> playlist_songs_vector = expandString(playlist_songs);
+                vector<string> playlist_artists_vector = expandString(playlist_artists);
+
+                playlist_songs_vector.push_back(song_name);
+                playlist_artists_vector.push_back(artist_name);
+
+                playlist_genres = playlist_genres + ", " + response;
+                playlist_genres = removeDuplicateGenres(playlist_genres);
+
+                playlist_songs = VectorToString(playlist_songs_vector);
+                playlist_artists = VectorToString(playlist_artists_vector);
+
+
+                SQLiteDatabase::updatePlaylist(playlist_name, playlist_songs, playlist_artists, playlist_genres, playlist_name);
+            }
+
+            // TODO: add genres to playlist genres, add song and artist to string. remove duplicate genres and push to DB
+
+        }
+
+        string VectorToString(vector<string> vect) {
+            string response;
+            for(int i = 0; i < vect.size(); i++) {
+                if(response.length() <= 0) {
+                    response = vect[i];
+                } else {
+                    response = response + ", " + vect[i];
+                }
+            }
+            return response;
+        }
+
+        bool doesSongExist(string songs, string artists, string req_song, string req_artist) {
+            vector<string> list_songs = expandString(songs);
+            vector<string> list_artists = expandString(artists);
+            for(int i = 0; i < list_songs.size(); i++) {
+                if(req_song == list_songs[i] && req_artist == list_artists[i]) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
         vector<string> getPlaylistDetails(string playlist_name) {
             vector<string> response;
             auto song_it = playlist_name_song_map.equal_range(playlist_name);
@@ -327,7 +398,7 @@ class Playlist {
             cout << "Enter name of the playlist: ";
             getline(cin, playlist_name);
             while(true) {
-                cout << "Enter name of song to add [Type '!stop' to stop]: ";
+                cout << "Enter name of song to add (YOU MUST ADD AT LEAST ONE) [Type '!stop' to stop]: ";
                 getline(cin, song_name);
 
                 if(song_name == "!stop") {
@@ -375,10 +446,6 @@ class Playlist {
                 }
                 genres_list = removeDuplicateGenres(genres_list);
                 int response = SQLiteDatabase::insertPlaylist(playlist_name, artists_list, songs_list, genres_list);
-                if(response) {
-    
-                }
-                cout << "RESPONSE: " << response << endl;
             }
         }
 
@@ -613,6 +680,7 @@ class AppUI {
 
                 switch(choice) {
                     case 1:
+                        playlist.addSongToPlaylist(playlist_name, playlist_details[0], playlist_details[1], playlist_details[2]);
                         break;
                     case 2:
                         playlist.removeSongFromPlaylist(playlist_name, playlist_details[0], playlist_details[1], playlist_details[2]);
