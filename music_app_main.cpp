@@ -19,19 +19,26 @@ class SQLiteDatabase {
         multimap<string, string> playlist_name_artist_map;
         multimap<string, string> playlist_name_genre_map;
     public:
+        // This function deletes a single record from the playlist table in the database.
+        // Deletion is based on the name of the playlist.
         static int deletePlaylist(string playlist_name) {
             sqlite3 *DB;
             char *error;
             
+            // Query to be sent for SQL execution.
             string query = "DELETE FROM PLAYLISTS WHERE PLAYLIST_NAME = '" + playlist_name + "';";
-        
+            
+            // Responds with an integer response code which indicates status of the SQL Request.
             int response = sqlite3_open("./db/projectDB.db", &DB);
             response = sqlite3_exec(DB, query.c_str(), NULL, 0, &error);
+
             if(response != SQLITE_OK) {
                 cout << "Error deleting playlist." << endl;
                 sqlite3_free(error);
             } else {
+                // Success
                 cout << "Playlist " << playlist_name << " deleted successfully!" << endl;
+                // Free memory and close the database because we don't need it anymore.
                 sqlite3_free(error);
                 sqlite3_close(DB);
                 return 1;
@@ -40,6 +47,8 @@ class SQLiteDatabase {
             return 0;
         }
 
+        // This function adds a single record to the playlist table in the database. The table contains the following columns:
+        // PLAYLIST_NAME | SONGS_LIST | ARTISTS_LIST | GENRES_LIST
         static int insertPlaylist(string playlist_name, string artist_list, string song_list, string genres_list) {
             sqlite3 *DB;
             char *error;
@@ -60,11 +69,16 @@ class SQLiteDatabase {
             sqlite3_close(DB);
             return 0;
         }
-    
+
+        // This function returns all records from the playlist table. The data returned is then casted onto the
+        // multimaps which store the following data as pairs
+        // PLAYLIST_NAME : SONGS | PLAYLIST_NAME : ARTISTS | PLAYLIST_NAME : GENRES
         void fetchPlaylistData() {
             sqlite3* DB;
             char* error;
 
+            // Clear whatever current data is stored in the maps. This is useful to obtain fresh data from the DB
+            // which allows the maps to update immediately with new data instead of having to re-execute the program.
             playlist_name_song_map.clear();
             playlist_name_artist_map.clear();
             playlist_name_genre_map.clear();
@@ -77,18 +91,26 @@ class SQLiteDatabase {
             if(rc != SQLITE_OK) {
                 cout << "Error fetching data" << endl;
             }
+            // Loops through all the rows in the database. In order to ensure that STMT returns any
+            // sort of non-empty value we check if the data returned is equal to SQLITE_ROW.
             while((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
+                // sqlite3_column_text returns each single column data based on index. For example,
+                // sqlite3_column_text(stmt, 0) returns data from the first column
+                // sqlite3_column_text(stmt, 2) returns data from the third column
                 int id = sqlite3_column_int(stmt, 0);
                 const char * playlist_name_data = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
                 const char * songs_list_data = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2));
                 const char * artists_list_data = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 3));
                 const char * genres_list_data = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 4));
                 
+                // Convert char* to string.
                 string playlist_name(playlist_name_data);
                 string songs_list(songs_list_data);
                 string artists_list(artists_list_data);
                 string genres_list(genres_list_data);
 
+                // Checks if current playlist data already exists in the map or not.
+                // Not sure if this check is required or not. !!!
                 if(playlist_name_song_map.count(playlist_name) == 0) {
                     playlist_name_song_map.insert(pair <string, string>(playlist_name, songs_list));
                     playlist_name_artist_map.insert(pair <string, string>(playlist_name, artists_list));
@@ -102,6 +124,8 @@ class SQLiteDatabase {
             sqlite3_close(DB);
         }
 
+        // This function fetches all the songs in the SONGS table of the database.
+        // Returned data is the song, the artist and the genre of the song.
         void fetchMusicData() {
             sqlite3* DB;
             char* error;
@@ -114,7 +138,12 @@ class SQLiteDatabase {
             if(rc != SQLITE_OK) {
                 cout << "Error fetching data" << endl;
             }
+            // Loops through all the rows in the database. In order to ensure that STMT returns any
+            // sort of non-empty value we check if the data returned is equal to SQLITE_ROW.
             while((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
+                // sqlite3_column_text returns each single column data based on index. For example,
+                // sqlite3_column_text(stmt, 0) returns data from the first column
+                // sqlite3_column_text(stmt, 2) returns data from the third column
                 int id = sqlite3_column_int(stmt, 0);
                 const char * song_data = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
                 const char * artist_data = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2));
@@ -122,6 +151,10 @@ class SQLiteDatabase {
                 string artist(artist_data);
                 string genres(genre_data);
                 string song(song_data);
+                // We're storing the song_genre_pair_map as a map of a key and the genres. We first noticed a problem that
+                // storing it as just simply a song : genre pair will lead to critical errors because there can be multiple songs
+                // of the same name by different artists. So instead, we're storing the key as a combination of the song and artist
+                // represented as SONG:ARTIST which we will decrypt later on to extract data.
                 string genre_pair_key = song + ":" + artist;
                 artist_song_pair_map.insert(pair <string, string>(artist, song));
                 song_genre_pair_map.insert(pair <string, string>(genre_pair_key, genres));
@@ -133,6 +166,9 @@ class SQLiteDatabase {
             sqlite3_close(DB);
         }
         
+        // Updates a single row from the PLAYLIST table based on the playlist name passed. This update function allows us to change:
+        // The songs in the playlist & it's artists which in turn changes the list of genres in the playlist and also allows us to change
+        // the name of the playlist.
         static void updatePlaylist(string playlist_name, string new_songs_list, string new_artists_list, string new_genres_list, string new_playlist_name) {
             sqlite3 *DB;
             char *error;
@@ -158,7 +194,7 @@ class SQLiteDatabase {
             sqlite3_close(DB);  
         }
 
-
+        // These set of methods allow this class to pass on data to other classes and share the maps among each other.
         multimap<string, string> getArtistSongPair() {
             return artist_song_pair_map;
         }
@@ -182,39 +218,73 @@ class MusicList {
         multimap<string, string> song_genre_pair_map;
         
     public:
+        // Get data from the database and store it the respective maps.
         MusicList(SQLiteDatabase database) {
             artist_song_pair_map = database.getArtistSongPair();
             song_genre_pair_map = database.getSongGenrePair();
         }
 
+        // Decrypts the SONG:ARTIST key in song_genre_pair_map.
         static vector<string> decryptGenreKey(string key) {
+            // Delimiter is the seperator character value. In this case ':' is the character.
             string delimiter = ":";
+            // Get the first token from the string before the delimiter.
+            // SONG:ARTIST ->  return SONG
             string token_song = key.substr(0, key.find(delimiter));
+            // Erases the token from the string. Therefore, SONG:ARTIST => ARTIST
             key.erase(0, key.find(delimiter) + delimiter.length());
+            // Gets the remaining string. The substr() function isn't required but will be useful
+            // in the future in case another parameter gets added to the key. For example in the
+            // future our key might look like TOKEN1:TOKEN2:TOKEN3 which is why the substr() function will
+            // help in the future.
             string token_artist = key.substr(0, key.find(delimiter));
             return { token_song, token_artist };
         }
-
+        
+        // Function checks if a certain song belongs to a certain genre.
         bool doesSongHaveGenre(string s, string delimiter, string genre) {
+            // Genres are stored in the following string format:
+            // "Genre1, Genre2, Genre3"... etc. Therefore in order to
+            // evaluate each individual genre, we have to split this string.
+            // The below while loop splits the string and returns each genre in the string
+            // one by one to evaluate.
             size_t pos = 0;
             string token;
+            // string::npos signifies the end of the string i.e. \0
+            // token holds each substring which in this case, is each genre
+            // if the token matches the passed genre, the song DOES contain the genre
+            // and returns true.
             while ((pos = s.find(delimiter)) != string::npos) {
                 token = s.substr(0, pos);
                 if(token == genre) {
                     return true;
                 }
+                // Removes the genre from the string after evaluation
+                // Resultant string will look like:
+                // "Genre1, Genre2, Genre3" => "Genre2, Genre3"
                 s.erase(0, pos + delimiter.length());
             }
+            // 's' holds the last genre of the string so we need
+            // to evaluate that as well
             if(s == genre) {
                 return true;
             }
             return false;
         }
 
+        // Prints all the songs, along with its artist and genres
         void printAllSongs() {
+            // An iterator of the multimap will help iterate through it.
             multimap<string, string> :: iterator itr;
+            // ID used purely for decorative indexing and serves no actual functional purpose.
             int id = 1;
+            // .begin() holds the first value of the map and .end() marks the last element of the multimap
+            // While iterating through the multimap, itr->first holds the value of the KEY and
+            // itr->second holds the VALUE of the key.
             for(itr = artist_song_pair_map.begin(); itr != artist_song_pair_map.end(); itr++) {
+                // Genres are stored in a seperate multimap whose key is in the form of SONG_NAME:ARTIST_NAME
+                // By passing this genre_pair_key into the find() function of the genre_pair map, the function returns
+                // the value of that key which holds the genre of the current song which we are printing.
                 string genre_pair_key = itr->second + ":" + itr->first;
                 cout << id << ". " << itr->second << " by " << itr->first << " [" << song_genre_pair_map.find(genre_pair_key)->second << "]" << endl;
                 id++;
@@ -222,17 +292,23 @@ class MusicList {
             cout << endl;
         }
         
-
+        // Searches songs by a specific genre
         void findSongByGenre(string genre) {
+            // ID for printing purposes.
             int id = 1;
             bool songHasGenre, found = false;
             vector<string> song_artist_pair;
             multimap<string, string> :: iterator itr;
-
+            // Looping through the song_genre_pair multimap and checking each song if at least
+            // one of it's genres matches the genre passed as parameter.
+            // itr->second is the list of genres, itr->first is the key = SONG:ARTIST
             for(itr = song_genre_pair_map.begin(); itr != song_genre_pair_map.end(); itr++) {
+                // Checks if the particular song contains the genre specified.
                 songHasGenre = doesSongHaveGenre(itr->second, ", ", genre);
                 if(songHasGenre) {
                     found = true;
+                    // Decrypts the key and returns a vector where
+                    // [0] => song, [1] => artist
                     song_artist_pair = decryptGenreKey(itr->first);
                     
                     multimap<string, string> :: iterator itr2;
@@ -249,6 +325,7 @@ class MusicList {
             }
         }
 
+        // Finds song based on a particular name
         void findSongByName(string name) {
             int id = 1;
             bool found = false;
@@ -268,6 +345,7 @@ class MusicList {
             }
         }
 
+        // Finds song by a particular artist
         void findSongByArtist(string artist) {
             int id = 1;
             auto iterator = artist_song_pair_map.equal_range(artist);
@@ -284,6 +362,7 @@ class MusicList {
             }
         }
 
+        // The below methods allow data sharing between classes.
         multimap<string, string> getSongGenrePair() {
             return song_genre_pair_map;
         }
@@ -310,9 +389,11 @@ class Playlist {
             artist_song_pair_map = database.getArtistSongPair();
             song_genre_pair_map = database.getSongGenrePair();
         }
-
+        
+        // Recommends songs to the user based on the genre mix of the playlist.
         void recommendSongs(string playlist_name, string playlist_songs, string playlist_artists, string playlist_genres) {
             vector<string> songs_list, artists_list, genre_list;
+            // Converts the string of data into a vector for easier evaluation.
             songs_list = expandString(playlist_songs);
             artists_list = expandString(playlist_artists);
             genre_list = expandString(playlist_genres);
@@ -323,6 +404,7 @@ class Playlist {
             int id = 1;
             for(itr = song_genre_pair_map.begin(); itr != song_genre_pair_map.end(); itr++) {
                 bool recommend = false, exists = false;
+
                 song_artist_vector = MusicList::decryptGenreKey(itr->first);
                 genre_vector = expandString(itr->second);
 
