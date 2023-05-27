@@ -1,5 +1,5 @@
 # music-recommendation-project
-A simple terminal-based music recommendation application created using C++ for the final project of my C++ course.
+A simple terminal-based music recommendation application created using C++ for the final project of our C++ course.
 
 ## Execution Instructions
 All you have to do is navigate to the project folder and run the following
